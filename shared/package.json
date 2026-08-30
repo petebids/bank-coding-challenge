@@ -1,0 +1,12 @@
+{
+  "name": "@commission-quote/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@temporalio/workflow": "^1.11.5",
+    "zod": "^3.24.1"
+  }
+}

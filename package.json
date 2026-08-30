@@ -1,0 +1,20 @@
+{
+  "name": "bank-coding-challenge",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "temporal-worker",
+    "commision-quote-app",
+    "mock-vendor-comission-quote-api"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace commision-quote-app",
+    "dev:worker": "npm run dev --workspace temporal-worker",
+    "dev:vendor-api": "npm run dev --workspace mock-vendor-comission-quote-api",
+    "test": "npm run test --workspaces --if-present",
+    "test:e2e": "npm run test:e2e --workspace commision-quote-app",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down"
+  }
+}
