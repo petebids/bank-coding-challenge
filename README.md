@@ -3,10 +3,43 @@
 A staff-facing tool for generating loan commission quotes from an external vendor.
 Built for the take-home coding challenge described in `spec.txt`.
 
+## AI usage
+
+### The work I did before engaging AI
+
+- Analysed the requirements to understand what the reviewer was hoping to see.
+- Made all the technical choices - NextJS, Tanstack Query, React Form, fullstack Typescript, docker for local dev
+- the testing strategy
+
+
+### What I delegated to claude 
+
+- Turning the take-home spec plus my architecture choices (Temporal, a service layer
+  over Temporal's query/signal API, MUI/react-hook-form/react-query, Docker Compose,
+  Playwright) into a concrete file layout and implementation plan.
+- Generating the initial implementation across all four packages: the Next.js
+  frontend and API routes, the service layer, the Temporal workflow/activity, and the
+  mock vendor API.
+- Writing the unit tests, the Temporal workflow test (using `@temporalio/testing`),
+  and the Playwright e2e suite.
+- Debugging environment/tooling issues surfaced while actually running the stack
+  end-to-end (a webpack/`ajv` version conflict from an `npm --legacy-peer-deps`
+  install, a musl-vs-glibc native-module crash in the worker's Alpine Docker image,
+  and a Turbopack module-resolution quirk with the shared package's `.js`-extension
+  imports).
+
+### What I reviewed manually
+
+- ran e2e tests, npm installs, manual testing 
+- reviewed package structure for adherence to idioms.
+- test implementation details
+
+
+
 ## Why Temporal?
 
 The spec calls out that the vendor API "must occasionally (randomly) throw an error,"
-which is really a stand-in for the general problem of talking to an unreliable
+which I interpreted as an ask to demonstrate my understanding of distributed systems general problem of talking to any
 downstream service: if a request to the vendor times out, the caller can't tell
 whether the vendor actually processed it or not (the "two generals" problem), so a
 naive retry risks a duplicate. Rather than papering over that with a client-side
@@ -25,6 +58,25 @@ quote generation as a durable, idempotent workflow:
   vendor call, no lost progress.
 
 See the architecture section of `CLAUDE.md` for the full request path and file layout.
+
+## Tradeoffs
+In this architecture, which I think is fine for the demo, the app doesn't have it's own storage and relays calls from the UI. to the server, to Temporal. 
+This pattern can be extended to updating a local projection of the entities and their state to have an easily securable list of previous quotes, a dashboard etc. 
+This pattern trades simplicity for availability - we can't start a durable workflow if the vendor quote API is down. An alternative tradeoff is to use the transactional outbox pattern and primary storage to store the user's intent, and a consuemr of the transactional outbox events can invoke temporal. 
+This would add operational overhead and could be the right tradeoff given the circumstances
+
+## Wny end to end testing
+
+All testing introduces coupling to some level of implementation detail.
+The level of coupling represents a trade-off - the more coupled to internals, the more precise the tests can be, and the faster they can be instantiated. 
+The downside of this approach is that by coupling to internals, to refactor said internals, you must refactor the tests, which breaks the red/green/refactor loop. 
+I subscribe to the ideology expressed [here](https://dev.to/craftedwithintent/understanding-the-testing-pyramid-and-testing-trophy-tools-strategies-and-challenges-k1j) - that unit tests should lean more towards units of behaviour or black box testing e.g. verifying the application does what it should from the o
+For mature systems running in production, e2e test coverage can be a bottleneck in CI or a release process, and be replaced by synthetic tests in production
+
+
+## What I would change for production
+
+The application would need it's own storage and application authentication and authorisation. Depending on what we knew about the longer term scope, I could have swapped the tech stack for a vite SPA and a Spring Boot Kotlin backend for a better technical ecosystem for the problem space
 
 ## Prerequisites
 
@@ -104,27 +156,3 @@ flow, all through the real UI.
 
 See `CLAUDE.md` for a deeper architectural walkthrough.
 
-## AI usage
-
-This project was built with Claude Code (Anthropic), used throughout rather than for
-one isolated step:
-
-- Turning the take-home spec plus my architecture choices (Temporal, a service layer
-  over Temporal's query/signal API, MUI/react-hook-form/react-query, Docker Compose,
-  Playwright) into a concrete file layout and implementation plan.
-- Generating the initial implementation across all four packages: the Next.js
-  frontend and API routes, the service layer, the Temporal workflow/activity, and the
-  mock vendor API.
-- Writing the unit tests, the Temporal workflow test (using `@temporalio/testing`),
-  and the Playwright e2e suite.
-- Debugging environment/tooling issues surfaced while actually running the stack
-  end-to-end (a webpack/`ajv` version conflict from an `npm --legacy-peer-deps`
-  install, a musl-vs-glibc native-module crash in the worker's Alpine Docker image,
-  and a Turbopack module-resolution quirk with the shared package's `.js`-extension
-  imports).
-
-I reviewed and adjusted the generated code throughout (for example, the idempotency
-key had to be generated per submit attempt rather than once per component, and the
-retry signal needed a payload so a demo could actually flip a failed run to success),
-and ran the full test suite plus manual verification against the live Docker Compose
-stack before considering it done.
